@@ -1,0 +1,20 @@
+FROM debian:11
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends unbound ruby \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN gem install bundler
+
+WORKDIR /var/lib/nbtun
+
+COPY lib ./lib
+
+COPY nbtun.rb .
+RUN chmod a+x nbtun.rb
+
+COPY Gemfile .
+RUN bundle install
+
+ENTRYPOINT ["/var/lib/nbtun/nbtun.rb"]

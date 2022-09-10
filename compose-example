@@ -1,0 +1,24 @@
+version: '3.7'
+
+services:
+
+  nbtun:
+    container_name: nbtun
+    image: nbtun
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file: .env
+    user: 1000:1000
+    volumes:
+      - /conf/unbound/dynamic.conf:/tmp/unbound.conf
+      - /conf/unbound/unbound_control.pem:/etc/unbound/unbound_control.pem
+      - /conf/unbound/unbound_control.key:/etc/unbound/unbound_control.key
+      - /conf/unbound/unbound_server.pem:/etc/unbound/unbound_server.pem
+      - /conf/unbound/unbound_server.key:/etc/unbound/unbound_server.key
+    networks:
+      unbound-net:
+
+networks:
+  unbound-net:
+    external: true
