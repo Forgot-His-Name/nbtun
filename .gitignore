@@ -56,5 +56,6 @@ build-iPhoneSimulator/
 # .rubocop-https?--*
 
 .nfs.*
-Dockerfile
+nbtun.df
+build.yml
 docker-compose.yml

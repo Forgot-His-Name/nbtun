@@ -33,4 +33,12 @@ class ApiNetbox
     make_api_call 'ipam/ip-addresses.json'
   end
 
+  def get_zones
+    make_api_call 'plugins/netbox-dns/zones.json'
+  end
+
+  def get_records
+    make_api_call 'plugins/netbox-dns/records.json'
+  end
+
 end

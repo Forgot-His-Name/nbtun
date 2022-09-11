@@ -12,10 +12,9 @@ class NbtUn
     @conf_file = ENV['CONF_FILE']
     @unbound_host = ENV['UNBOUND_HOST']
 
-    @last_reload = ''
+    $stdout.sync = true
 
-    @zones = {}
-    @names = {}
+    @last_reload = ''
   end
 
   def main_loop
@@ -27,17 +26,17 @@ class NbtUn
   end
 
   def sync
-    load_ips
+    zones = load_zones
 
     old_conf = read_config @conf_file
-    new_conf = gen_config
+    new_conf = gen_config zones
 
     unless old_conf == new_conf
       puts "config changed"
       write_config @conf_file, new_conf
     end
 
-    unless @last_reload == 'ok' && old_conf == new_conf
+    if @last_reload != 'ok' || old_conf != new_conf
       unbound_reload
     end
   end
@@ -52,33 +51,9 @@ class NbtUn
 
     cmd = "unbound-control -s #{addr} reload"
 
-    puts "call #{cmd}"
-    @last_reload = `#{cmd}`
-    puts @last_reload
-  end
-
-  def load_ips
-    @zones = {}
-    @names = {}
-
-    list = @netbox.get_ips
-    list.each do |item|
-      next unless item['family']['value'] == 4
-      next if item['dns_name'] == ''
-
-      name = item['dns_name']
-      puts "duplicated name '#{name}' found" if @names[name]
-
-      host, zone = name.split('.', 2)
-      next unless zone
-
-      addr, mask = item['address'].split('/')
-
-      @zones[zone] = {} unless @zones[zone]
-      @zones[zone][name] = addr if addr
-
-      @names[name] = addr if addr
-    end
+    puts "run '#{cmd}'"
+    @last_reload = `#{cmd}`.strip
+    puts "got '#{@last_reload}'"
   end
 
   def write_config(path, conf)
@@ -97,13 +72,18 @@ class NbtUn
     conf
   end
 
-  def gen_config
+  def gen_config(zones)
     conf = [ "# auto generated, do not edit\n", 'server:' ]
 
-    @zones.each do |zone, hosts|
+    zones.each do |zone, hosts|
       conf << "  local-zone: \"#{zone}.\" static"
-      hosts.each do |name, addr|
-        conf << "    local-data: \"#{name}. IN A #{addr}\""
+      hosts.each do |name, params|
+        case params[:type]
+        when 'A'
+          conf << "    local-data: \"#{name}. IN A #{params[:value]}\""
+        when 'CNAME'
+          conf << "    local-data: \"#{name}. IN CNAME #{params[:value]}\""
+        end
       end
     end
 
